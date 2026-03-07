@@ -1,5 +1,6 @@
 package com.animalShelterBot;
 
+import com.animalShelterBot.service.StartHandlerService;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.CallbackQuery;
@@ -10,6 +11,7 @@ import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.SendMessage;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +23,9 @@ public class AnimalShelterTelegramBot {
 
     @Value("${bot.token}")
     private String botToken;
+
+    @Resource
+    private StartHandlerService startHandlerService;
 
     public AnimalShelterTelegramBot(@Value("${bot.token}") String botToken) {
         this.telegramBot = new TelegramBot(botToken);
@@ -36,6 +41,12 @@ public class AnimalShelterTelegramBot {
 
     // Основной обработчик
     private void processUpdate(Update update) {
-
+        if (update.message() != null && update.message().text() != null) {
+            long chatId = update.message().chat().id();
+            String messageText = update.message().text();
+            if ("/start".equals(messageText)) {
+                startHandlerService.handleStart(chatId);
+            }
+        }
     }
 }
