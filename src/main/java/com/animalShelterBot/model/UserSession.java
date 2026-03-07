@@ -2,7 +2,6 @@ package com.animalShelterBot.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import org.springframework.data.annotation.Id;
 
 /**
  * Сессия пользователя — хранит состояние диалога.
@@ -60,7 +59,7 @@ public class UserSession {
         return shelterType;
     }
 
-    public void setShelterType(AnimalType type) {
-        this.shelterType = type;
+    public void setShelterType(AnimalType shelterType) {
+        this.shelterType = shelterType;
     }
 }
