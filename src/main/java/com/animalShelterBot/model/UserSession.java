@@ -59,7 +59,7 @@ public class UserSession {
         return shelterType;
     }
 
-    public void setShelterType(AnimalType shelterType) {
-        this.shelterType = shelterType;
+    public void setShelterType(AnimalType type) {
+        this.shelterType = type;
     }
 }
