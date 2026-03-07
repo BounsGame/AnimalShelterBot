@@ -65,7 +65,7 @@ public class AnimalShelterTelegramBot {
      * Токен бота, загружаемый из {@code application.properties}.
      * Не используется напрямую — передаётся в {@link TelegramBot}, созданный в конфигурации.
      */
-    @Value("${bot.token}")
+    @Value("${telegram.bot.token}")
     private String botToken;
 
     /**
