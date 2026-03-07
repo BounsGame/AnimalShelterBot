@@ -4,72 +4,164 @@ import com.animalShelterBot.model.AnimalType;
 import com.animalShelterBot.model.State;
 import com.animalShelterBot.model.UserSession;
 import com.animalShelterBot.repository.UserSessionRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Класс сервиса сессии пользователя для взаимодействия с БД
+ * Сервис для управления сессией пользователя в Telegram-боте.
+ * <p>
+ * Обеспечивает сохранение и получение состояния диалога ({@link State}),
+ * типа выбранного приюта ({@link AnimalType}) и других данных сессии через JPA-репозиторий.
+ * </p>
  *
- * @author Matveev Danil (Team: Animal Shelter)
- * @version 1.0
+ * <h2>Проблема, решённая в этом классе:</h2>
+ * Ранее методы использовали {@code userSessionRepository.getReferenceById(chatId)},
+ * который возвращает прокси-объект (lazy loading). При попытке вызвать геттер или сеттер
+ * вне активной Hibernate-сессии возникала ошибка:
+ * <pre>
+ * org.hibernate.LazyInitializationException: Could not initialize proxy - no session
+ * </pre>
+ *
+ * <h2>Решение:</h2>
+ * <ul>
+ *   <li>Добавлена аннотация {@link Transactional} ко всем методам, изменяющим сущность,
+ *       чтобы гарантировать наличие активной сессии при работе с прокси.</li>
+ *   <li>Заменён {@code getReferenceById()} на {@code findById()} в методах чтения,
+ *       чтобы избежать ленивой инициализации там, где она не нужна.</li>
+ *   <li>Добавлена проверка существования сессии перед созданием новой.</li>
+ *   <li>Улучшена обработка случаев, когда сессия отсутствует — возвращается значение по умолчанию.</li>
+ * </ul>
+ *
+ * @author Олег Мираков (Team: Animal Shelter)
+ * @version 1.1 (исправлено: 2026-03-07)
  * @since 2026-03-07
  */
-
 @Service
 public class UserSessionService {
 
     @Autowired
     private UserSessionRepository userSessionRepository;
 
-    public void setStateWaitingForShelter(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setState(State.WAITING_FOR_SHELTER);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает состояние "ожидание выбора приюта".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateWaitingForShelter(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.WAITING_FOR_SHELTER);
+        userSessionRepository.save(session);
     }
 
-    public void setStateInMainMenu(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setState(State.IN_MAIN_MENU);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает состояние "в главном меню".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateInMainMenu(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.IN_MAIN_MENU);
+        userSessionRepository.save(session);
     }
 
-    public void setStateAwaitingReport(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setState(State.AWAITING_REPORT);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает состояние "ожидание отчёта".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateAwaitingReport(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.AWAITING_REPORT);
+        userSessionRepository.save(session);
     }
 
-    public void setStateVolunteerCalled(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setState(State.VOLUNTEER_CALLED);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает состояние "вызван волонтёр".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateVolunteerCalled(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.VOLUNTEER_CALLED);
+        userSessionRepository.save(session);
     }
 
-    public void setShelterTypeCat(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setShelterType(AnimalType.CAT);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает тип приюта — кошки.
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setShelterTypeCat(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setShelterType(AnimalType.CAT);
+        userSessionRepository.save(session);
     }
 
-    public void setShelterTypeDog(Long chatId){
-        UserSession userSession = userSessionRepository.getReferenceById(chatId);
-        userSession.setShelterType(AnimalType.DOG);
-        userSessionRepository.save(userSession);
+    /**
+     * Устанавливает тип приюта — собаки.
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setShelterTypeDog(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        session.setShelterType(AnimalType.DOG);
+        userSessionRepository.save(session);
     }
 
-    public State getState(Long chatId){
-        return userSessionRepository.getReferenceById(chatId).getState();
+    /**
+     * Получает текущее состояние пользователя.
+     * Если сессия не найдена — возвращает состояние по умолчанию.
+     *
+     * @param chatId идентификатор чата пользователя
+     * @return текущее состояние диалога
+     */
+    public State getState(Long chatId) {
+        return userSessionRepository.findById(chatId).map(UserSession::getState).orElse(State.WAITING_FOR_SHELTER);
     }
 
-    public AnimalType getShelterType(Long chatId){
-        return userSessionRepository.getReferenceById(chatId).getShelterType();
+    /**
+     * Получает выбранный тип приюта (кошки/собаки).
+     *
+     * @param chatId идентификатор чата пользователя
+     * @return тип приюта или null, если не выбран
+     */
+    public AnimalType getShelterType(Long chatId) {
+        return userSessionRepository.findById(chatId).map(UserSession::getShelterType).orElse(null);
     }
 
-    public UserSession getUserSession(Long chatId){
-        return userSessionRepository.getReferenceById(chatId);
+    /**
+     * Возвращает полную сессию пользователя.
+     *
+     * @param chatId идентификатор чата
+     * @return объект сессии или null, если не найден
+     */
+    public UserSession getUserSession(Long chatId) {
+        return userSessionRepository.findById(chatId).orElse(null);
     }
 
-    public void addNewUserSession(Long chatId){
-        userSessionRepository.save(new UserSession(chatId));
+    /**
+     * Создаёт новую сессию, если она ещё не существует.
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void addNewUserSession(Long chatId) {
+        findOrCreateSession(chatId);
+    }
+
+    // Внутренний метод: находит сессию или создаёт новую
+    private UserSession findOrCreateSession(Long chatId) {
+        return userSessionRepository.findById(chatId).orElseGet(() -> {
+            UserSession newSession = new UserSession(chatId);
+            newSession.setState(State.WAITING_FOR_SHELTER);
+            return userSessionRepository.save(newSession);
+        });
     }
 }
