@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Основной класс Telegram-бота — обрабатывает входящие обновления от пользователей.
+ *
  * <p>
  * Этот компонент отвечает за:
  * <ul>
