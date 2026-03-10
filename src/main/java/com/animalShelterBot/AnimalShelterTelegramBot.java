@@ -3,8 +3,7 @@ package com.animalShelterBot;
 import com.animalShelterBot.model.AnimalType;
 import com.animalShelterBot.model.State;
 import com.animalShelterBot.model.UserSession;
-import com.animalShelterBot.service.StartHandlerService;
-import com.animalShelterBot.service.UserSessionService;
+import com.animalShelterBot.service.*;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
@@ -66,6 +65,9 @@ public class AnimalShelterTelegramBot {
     private final TelegramBot telegramBot;
     private final StartHandlerService startHandlerService;
     private final UserSessionService userSessionService;
+    private final ShelterInfoService shelterInfoService;
+    private final ReportRequestService reportRequestService;
+    private final AdoptInfoService adoptInfoService;
 
     /**
      * Токен бота, загружаемый из {@code application.properties}.
@@ -93,10 +95,15 @@ public class AnimalShelterTelegramBot {
      * @param userSessionService  сервис для хранения состояния диалога
      */
 
-    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService, UserSessionService userSessionService) {
+    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService,
+                                    UserSessionService userSessionService, ShelterInfoService shelterInfoService,
+                                    ReportRequestService reportRequestService, AdoptInfoService adoptInfoService) {
         this.telegramBot = telegramBot;
         this.startHandlerService = startHandlerService;
         this.userSessionService = userSessionService;
+        this.shelterInfoService = shelterInfoService;
+        this.reportRequestService = reportRequestService;
+        this.adoptInfoService = adoptInfoService;
     }
 
     /**
@@ -131,7 +138,6 @@ public class AnimalShelterTelegramBot {
 
             if ("/start".equals(messageText)) {
                 startHandlerService.handleStart(chatId);
-                sendShelterChoice(chatId);
             }
             // Здесь потом можно добавить обработку текстовых сообщений в других состояниях
         }
@@ -141,118 +147,36 @@ public class AnimalShelterTelegramBot {
             String data = update.callbackQuery().data();
             long chatId = update.callbackQuery().message().chat().id();
 
-            // 🔹 Существующая логика: выбор приюта
-            if ("CAT".equals(data)) {
-                userSessionService.setShelterTypeCat(chatId);
-                userSessionService.setStateInMainMenu(chatId); // ✅ Переход в главное меню
-                sendMessage(chatId, "🐱 Вы выбрали приют для кошек. Добро пожаловать!");
-                sendMainMenu(chatId); // ✅ Показываем главное меню
-            }
-            else if ("DOG".equals(data)) {
-                userSessionService.setShelterTypeDog(chatId);
-                userSessionService.setStateInMainMenu(chatId); // ✅ Переход в главное меню
-                sendMessage(chatId, "🐕 Вы выбрали приют для собак. Добро пожаловать!");
-                sendMainMenu(chatId); // ✅ Показываем главное меню
-            }
+            // выбор приюта
+            startHandlerService.getShelterChoice(data, chatId);
 
-            // 🔹 НОВАЯ логика: главное меню
-            else if ("MENU_INFO".equals(data)) {
-                handleShelterInfo(chatId);
-            }
-            else if ("MENU_ADOPT".equals(data)) {
-                handleAdoptInfo(chatId);
-            }
-            else if ("MENU_REPORT".equals(data)) {
-                handleReportRequest(chatId);
-            }
-            else if ("MENU_VOLUNTEER".equals(data)) {
+            // главное меню
+            if ("MENU_INFO".equals(data)) {
+                shelterInfoService.handleShelterInfo(chatId);
+            } else if ("MENU_ADOPT".equals(data)) {
+                adoptInfoService.handleAdoptInfo(chatId);
+            } else if ("MENU_REPORT".equals(data)) {
+                reportRequestService.handleReportRequest(chatId);
+            } else if ("MENU_VOLUNTEER".equals(data)) {
                 handleVolunteerCall(chatId);
             }
 
-            // ✅ Обязательно "убираем" нажатие с кнопки
+            //  убираем нажатие с кнопки
             answerCallbackQuery(update.callbackQuery().id(), "Обработка...");
         }
     }
 
-    // === Методы отправки клавиатур ===
-
     /**
-     * Отправляет пользователю инлайн-клавиатуру для выбора приюта.
-     *
-     * @param chatId идентификатор чата, куда отправить сообщение
+     * 🔹 Вызов волонтёра
      */
-
-    private void sendShelterChoice(long chatId) {
-        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(
-                new InlineKeyboardButton("Приют для кошек").callbackData("CAT"),
-                new InlineKeyboardButton("Приют для собак").callbackData("DOG")
-        );
-        SendMessage message = new SendMessage(chatId, "Выберите приют:");
-        message.replyMarkup(keyboard);
-        telegramBot.execute(message);
-    }
-
-    /** Отправляет главное меню с 4 кнопками */
-    private void sendMainMenu(long chatId) {
-        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
-        keyboard.addRow(new InlineKeyboardButton("🏠 О приюте").callbackData("MENU_INFO"),
-                new InlineKeyboardButton("🐾 Как взять животное").callbackData("MENU_ADOPT"));
-        keyboard.addRow(new InlineKeyboardButton("📝 Отчёт о питомце").callbackData("MENU_REPORT"),
-                new InlineKeyboardButton("🆘 Позвать волонтёра").callbackData("MENU_VOLUNTEER"));
-        SendMessage message = new SendMessage(chatId, "Выберите действие:");
-        message.replyMarkup(keyboard);
-        telegramBot.execute(message);
-    }
-
-    // === Обработчики кнопок главного меню ===
-
-    /** 🔹 Проверка типа приюта из БД + заготовки if/else */
-    private void handleShelterInfo(long chatId) {
-        // Получаем тип приюта из БД через сервис
-        AnimalType shelterType = userSessionService.getShelterType(chatId);
-
-        if (shelterType == AnimalType.CAT) {
-            // 🐱 Ветка для кошачьего приюта
-            // Пример:
-            sendMessage(chatId, "🐱 Информация о кошачьем приюте:\n• Адрес...\n• Режим работы...");
-        }
-        else if (shelterType == AnimalType.DOG) {
-            // 🐕 Ветка для собачьего приюта
-            // Пример:
-            sendMessage(chatId, "🐕 Информация о собачьем приюте:\n• Адрес...\n• Режим работы...");
-        }
-        else {
-            // Если тип приюта не определён (защита от ошибок)
-            sendMessage(chatId, "⚠️ Сначала выберите тип приюта через /start");
-        }
-    }
-
-    /** Как взять животное */
-    private void handleAdoptInfo(long chatId) {
-        String text = "🐾 *Как взять животное:*\n" +
-                "1️⃣ Заполните анкету потенциального хозяина\n" +
-                "2️⃣ Дождитесь звонка волонтёра\n" +
-                "3️⃣ Приезжайте знакомиться с питомцем\n" +
-                "4️⃣ Подпишите договор и заберите друга!";
-        sendMessageWithMarkdown(chatId, text);
-    }
-
-    /** Запрос отчёта о питомце */
-    private void handleReportRequest(long chatId) {
-        // Переключаем состояние на ожидание отчёта
-        userSessionService.setStateAwaitingReport(chatId);
-        sendMessage(chatId, "📝 Отправьте фото и короткий текст о том, как дела у вашего питомца.");
-    }
-
-    /** 🔹 Вызов волонтёра */
     private void handleVolunteerCall(long chatId) {
         // 1. Подтверждение пользователю
         sendMessage(chatId, "✅ Волонтёр уже уведомлён! Ожидайте ответа в течение 5-10 минут.");
 
-        // 2. Обновляем состояние (опционально)
+        // 2. Обновляем состояние
         userSessionService.setStateVolunteerCalled(chatId);
 
-        // 3. Уведомление волонтёрам (админ-чат)
+        // 3. Уведомление волонтёрам
         String alert = String.format("🆘 *Вызов волонтёра!*\n" +
                         "👤 Пользователь: `%d`\n" +
                         "⏰ Время: `%s`",
@@ -283,14 +207,18 @@ public class AnimalShelterTelegramBot {
         telegramBot.execute(new SendMessage(chatId, text));
     }
 
-    /** Отправка сообщения с Markdown-разметкой */
+    /**
+     * Отправка сообщения с Markdown-разметкой
+     */
     private void sendMessageWithMarkdown(long chatId, String text) {
         SendMessage message = new SendMessage(chatId, text);
         message.parseMode(ParseMode.Markdown);
         telegramBot.execute(message);
     }
 
-    /** Ответ на callbackQuery (чтобы убрать "часики" с кнопки) */
+    /**
+     * Ответ на callbackQuery (чтобы убрать "часики" с кнопки)
+     */
     private void answerCallbackQuery(String callbackQueryId, String text) {
         AnswerCallbackQuery answer = new AnswerCallbackQuery(callbackQueryId);
         answer.text(text);
