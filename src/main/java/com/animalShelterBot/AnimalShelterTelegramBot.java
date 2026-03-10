@@ -10,6 +10,7 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.SendMessage;
 import jakarta.annotation.PostConstruct;
@@ -141,13 +142,13 @@ public class AnimalShelterTelegramBot {
             long chatId = update.callbackQuery().message().chat().id();
 
             // 🔹 Существующая логика: выбор приюта
-            if ("SHELTER_CAT".equals(data)) {
+            if ("CAT".equals(data)) {
                 userSessionService.setShelterTypeCat(chatId);
                 userSessionService.setStateInMainMenu(chatId); // ✅ Переход в главное меню
                 sendMessage(chatId, "🐱 Вы выбрали приют для кошек. Добро пожаловать!");
                 sendMainMenu(chatId); // ✅ Показываем главное меню
             }
-            else if ("SHELTER_DOG".equals(data)) {
+            else if ("DOG".equals(data)) {
                 userSessionService.setShelterTypeDog(chatId);
                 userSessionService.setStateInMainMenu(chatId); // ✅ Переход в главное меню
                 sendMessage(chatId, "🐕 Вы выбрали приют для собак. Добро пожаловать!");
@@ -175,7 +176,7 @@ public class AnimalShelterTelegramBot {
 
     // === Методы отправки клавиатур ===
 
-    /  /**
+    /**
      * Отправляет пользователю инлайн-клавиатуру для выбора приюта.
      *
      * @param chatId идентификатор чата, куда отправить сообщение
@@ -183,8 +184,8 @@ public class AnimalShelterTelegramBot {
 
     private void sendShelterChoice(long chatId) {
         InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(
-                new InlineKeyboardButton("Приют для кошек").callbackData("SHELTER_CAT"),
-                new InlineKeyboardButton("Приют для собак").callbackData("SHELTER_DOG")
+                new InlineKeyboardButton("Приют для кошек").callbackData("CAT"),
+                new InlineKeyboardButton("Приют для собак").callbackData("DOG")
         );
         SendMessage message = new SendMessage(chatId, "Выберите приют:");
         message.replyMarkup(keyboard);
@@ -193,12 +194,11 @@ public class AnimalShelterTelegramBot {
 
     /** Отправляет главное меню с 4 кнопками */
     private void sendMainMenu(long chatId) {
-        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(
-                new InlineKeyboardButton("🏠 О приюте").callbackData("MENU_INFO"),
-                new InlineKeyboardButton("🐾 Как взять животное").callbackData("MENU_ADOPT"),
-                new InlineKeyboardButton("📝 Отчёт о питомце").callbackData("MENU_REPORT"),
-                new InlineKeyboardButton("🆘 Позвать волонтёра").callbackData("MENU_VOLUNTEER")
-        );
+        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+        keyboard.addRow(new InlineKeyboardButton("🏠 О приюте").callbackData("MENU_INFO"),
+                new InlineKeyboardButton("🐾 Как взять животное").callbackData("MENU_ADOPT"));
+        keyboard.addRow(new InlineKeyboardButton("📝 Отчёт о питомце").callbackData("MENU_REPORT"),
+                new InlineKeyboardButton("🆘 Позвать волонтёра").callbackData("MENU_VOLUNTEER"));
         SendMessage message = new SendMessage(chatId, "Выберите действие:");
         message.replyMarkup(keyboard);
         telegramBot.execute(message);
@@ -213,15 +213,13 @@ public class AnimalShelterTelegramBot {
 
         if (shelterType == AnimalType.CAT) {
             // 🐱 Ветка для кошачьего приюта
-            // Заполнишь позже: текст, картинки, ссылки и т.д.
             // Пример:
-            // sendMessage(chatId, "🐱 Информация о кошачьем приюте:\n• Адрес...\n• Режим работы...");
+            sendMessage(chatId, "🐱 Информация о кошачьем приюте:\n• Адрес...\n• Режим работы...");
         }
         else if (shelterType == AnimalType.DOG) {
             // 🐕 Ветка для собачьего приюта
-            // Заполнишь позже
             // Пример:
-            // sendMessage(chatId, "🐕 Информация о собачьем приюте:\n• Адрес...\n• Режим работы...");
+            sendMessage(chatId, "🐕 Информация о собачьем приюте:\n• Адрес...\n• Режим работы...");
         }
         else {
             // Если тип приюта не определён (защита от ошибок)
@@ -262,7 +260,7 @@ public class AnimalShelterTelegramBot {
                 java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy"))
         );
         SendMessage alertMessage = new SendMessage(volunteerChatId, alert);
-        alertMessage.parseMode("Markdown");
+        alertMessage.parseMode(ParseMode.Markdown);
 
         try {
             telegramBot.execute(alertMessage);
@@ -288,7 +286,7 @@ public class AnimalShelterTelegramBot {
     /** Отправка сообщения с Markdown-разметкой */
     private void sendMessageWithMarkdown(long chatId, String text) {
         SendMessage message = new SendMessage(chatId, text);
-        message.parseMode("Markdown");
+        message.parseMode(ParseMode.Markdown);
         telegramBot.execute(message);
     }
 
