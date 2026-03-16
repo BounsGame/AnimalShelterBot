@@ -23,6 +23,7 @@ public class ContactDataService {
         contactsRepository.save(new ContactData(chatId,contacts));
     }
 
+    //при использовании метода делайте try на EntityNotFoundException
     public ContactData getContactsByChatId(Long chatId){
         return contactsRepository.getReferenceById(chatId);
     }
