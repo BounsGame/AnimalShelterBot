@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class StartHandlerService {
 
-    @Resource
-    private TelegramBot telegramBot;
+    private final TelegramBot telegramBot;
 
     private final UserSessionService userSessionService;
 
-    StartHandlerService (UserSessionService userSessionService){
+    StartHandlerService (UserSessionService userSessionService, TelegramBot telegramBot){
         this.userSessionService = userSessionService;
+        this.telegramBot = telegramBot;
     }
 
     /**

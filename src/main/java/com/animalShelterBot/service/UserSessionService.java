@@ -62,6 +62,7 @@ public class UserSessionService {
      */
     @Transactional
     public void setStateInMainMenu(Long chatId) {
+        System.out.println("in setMain");
         UserSession session = findOrCreateSession(chatId);
         session.setState(State.IN_MAIN_MENU);
         userSessionRepository.save(session);
@@ -157,8 +158,9 @@ public class UserSessionService {
     }
 
     // Внутренний метод: находит сессию или создаёт новую
-    private UserSession findOrCreateSession(Long chatId) {
+    public UserSession findOrCreateSession(Long chatId) {
         return userSessionRepository.findById(chatId).orElseGet(() -> {
+            System.out.println("in create");
             UserSession newSession = new UserSession(chatId);
             newSession.setState(State.WAITING_FOR_SHELTER);
             return userSessionRepository.save(newSession);
