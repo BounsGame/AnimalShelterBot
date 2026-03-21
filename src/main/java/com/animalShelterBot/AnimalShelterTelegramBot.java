@@ -159,6 +159,8 @@ public class AnimalShelterTelegramBot {
                 reportRequestService.handleReportRequest(chatId);
             } else if ("MENU_VOLUNTEER".equals(data)) {
                 handleVolunteerCall(chatId);
+            } else {
+                shelterInfoService.handleShelterInfoMenu(chatId, data);
             }
 
             //  убираем нажатие с кнопки
