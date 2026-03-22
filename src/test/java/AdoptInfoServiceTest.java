@@ -1,50 +1,139 @@
+import com.animalShelterBot.model.AnimalType;
 import com.animalShelterBot.service.AdoptInfoService;
+import com.animalShelterBot.service.UserSessionService;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.SendMessage;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class AdoptInfoServiceTest {
+@ExtendWith(MockitoExtension.class)
+public class AdoptInfoServiceTest {
 
     @Mock
     private TelegramBot telegramBot;
 
+    @Mock
+    private UserSessionService userSessionService;
+
     @InjectMocks
     private AdoptInfoService adoptInfoService;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    @Captor
+    private ArgumentCaptor<SendMessage> sendMessageCaptor;
+
+    @Test
+    public void handleAdoptInfoSendsMainMessageTest() {
+        long chatId = 123L;
+
+        when(userSessionService.getShelterType(chatId)).thenReturn(AnimalType.DOG);
+
+        adoptInfoService.handleAdoptInfo(chatId);
+
+        verify(telegramBot, times(2)).execute(sendMessageCaptor.capture());
+        var allMessages = sendMessageCaptor.getAllValues();
+
+        String firstText = allMessages.get(0).getParameters().get("text").toString();
+        assert firstText.contains("Как взять животное:");
     }
 
     @Test
-    void handleAdoptInfo_shouldSendProperMessageWithMarkdown() {
-        // Given
-        long chatId = 123456789L;
-        ArgumentCaptor<SendMessage> captor = ArgumentCaptor.forClass(SendMessage.class);
+    public void handleAdoptInfoSendsDetailsMenuTest() {
+        long chatId = 123L;
 
-        // When
+        when(userSessionService.getShelterType(chatId)).thenReturn(AnimalType.CAT);
+
         adoptInfoService.handleAdoptInfo(chatId);
 
-        // Then
-        verify(telegramBot, times(1)).execute(captor.capture());
-        SendMessage capturedMessage = captor.getValue();
+        verify(telegramBot, times(2)).execute(sendMessageCaptor.capture());
+        var allMessages = sendMessageCaptor.getAllValues();
 
-        String expectedText = "🐾 *Как взять животное:*\n" +
-                "1️⃣ Заполните анкету потенциального хозяина\n" +
-                "2️⃣ Дождитесь звонка волонтёра\n" +
-                "3️⃣ Приезжайте знакомиться с питомцем\n" +
-                "4️⃣ Подпишите договор и заберите друга!";
+        SendMessage menuMessage = allMessages.get(1);
+        Object replyMarkup = menuMessage.getParameters().get("reply_markup");
+        assert replyMarkup != null;
+    }
 
-        assertThat(capturedMessage.getParameters().get("chat_id")).isEqualTo(chatId);
-        assertThat(capturedMessage.getParameters().get("text")).isEqualTo(expectedText);
-        assertThat(capturedMessage.getParameters().get("parse_mode")).isEqualTo("Markdown");
+    @Test
+    public void handleAdoptCallback_DocumentsSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_DOCS", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Документы для выдачи питомца");
+    }
+
+    @Test
+    public void handleAdoptCallback_TransportSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_TRANSPORT", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Рекомендации по транспортировке");
+    }
+
+    @Test
+    public void handleAdoptCallback_MeetTipsSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_MEET_TIPS", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Как правильно познакомиться с животным");
+    }
+
+    @Test
+    public void handleAdoptCallback_HomePuppySendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_HOME_PUPPY", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Обустройство дома для щенка/котёнка");
+    }
+
+    @Test
+    public void handleAdoptCallback_HomeAdultSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_HOME_ADULT", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Обустройство дома для взрослого животного");
+    }
+
+    @Test
+    public void handleAdoptCallback_HomeSpecialSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_HOME_SPECIAL", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Обустройство дома для животного с ОВЗ");
+    }
+
+    @Test
+    public void handleAdoptCallback_UnknownDataDoesNotSendMessageTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("UNKNOWN", chatId);
+
+        verify(telegramBot, never()).execute(any(SendMessage.class));
     }
 }
