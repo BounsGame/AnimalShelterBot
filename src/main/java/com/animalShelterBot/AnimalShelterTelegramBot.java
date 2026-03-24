@@ -95,9 +95,7 @@ public class AnimalShelterTelegramBot {
      * @param userSessionService  сервис для хранения состояния диалога
      */
 
-    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService,
-                                    UserSessionService userSessionService, ShelterInfoService shelterInfoService,
-                                    ReportRequestService reportRequestService, AdoptInfoService adoptInfoService) {
+    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService, UserSessionService userSessionService, ShelterInfoService shelterInfoService, ReportRequestService reportRequestService, AdoptInfoService adoptInfoService) {
         this.telegramBot = telegramBot;
         this.startHandlerService = startHandlerService;
         this.userSessionService = userSessionService;
@@ -155,6 +153,8 @@ public class AnimalShelterTelegramBot {
                 shelterInfoService.handleShelterInfo(chatId);
             } else if ("MENU_ADOPT".equals(data)) {
                 adoptInfoService.handleAdoptInfo(chatId);
+            } else if (data.startsWith("ADOPT_")) {
+                adoptInfoService.handleAdoptCallback(data, chatId);
             } else if ("MENU_REPORT".equals(data)) {
                 reportRequestService.handleReportRequest(chatId);
             } else if ("MENU_VOLUNTEER".equals(data)) {
@@ -179,12 +179,7 @@ public class AnimalShelterTelegramBot {
         userSessionService.setStateVolunteerCalled(chatId);
 
         // 3. Уведомление волонтёрам
-        String alert = String.format("🆘 *Вызов волонтёра!*\n" +
-                        "👤 Пользователь: `%d`\n" +
-                        "⏰ Время: `%s`",
-                chatId,
-                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy"))
-        );
+        String alert = String.format("🆘 *Вызов волонтёра!*\n" + "👤 Пользователь: `%d`\n" + "⏰ Время: `%s`", chatId, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")));
         SendMessage alertMessage = new SendMessage(volunteerChatId, alert);
         alertMessage.parseMode(ParseMode.Markdown);
 
