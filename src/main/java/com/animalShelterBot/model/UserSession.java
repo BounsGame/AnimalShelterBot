@@ -3,6 +3,8 @@ package com.animalShelterBot.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 /**
  * Сессия пользователя — хранит состояние диалога.
  * <p>
@@ -29,6 +31,15 @@ public class UserSession {
     @Column(name = "shelter_type", length = 10)
     private AnimalType shelterType; // CAT / DOG
 
+    @Column(name = "probationStart")
+    private LocalDateTime startProbationTime;
+
+    @Column(name = "probationOver")
+    private LocalDateTime OverProbationTime;
+
+    @Column(name = "probationComplete")
+    private boolean probationComplete;
+
     // Необходимый пустой конструктор для JPA
     public UserSession() {
     }
@@ -39,6 +50,30 @@ public class UserSession {
     }
 
     // Геттеры и сеттеры
+    public boolean getProbationComplete(){
+        return probationComplete;
+    }
+
+    public void setProbationComplete (boolean change){
+        probationComplete = change;
+    }
+
+    public LocalDateTime getProbationStartTime (){
+        return startProbationTime;
+    }
+
+    public void setProbationStartTime(LocalDateTime localDateTime){
+        startProbationTime = localDateTime;
+    }
+
+    public void setProbationOverTime (LocalDateTime localDateTime){
+        OverProbationTime = localDateTime;
+    }
+
+    public LocalDateTime getProbationOverTime (){
+        return OverProbationTime;
+    }
+
     public Long getChatId() {
         return chatId;
     }

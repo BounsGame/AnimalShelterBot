@@ -68,6 +68,7 @@ public class AnimalShelterTelegramBot {
     private final ShelterInfoService shelterInfoService;
     private final ReportRequestService reportRequestService;
     private final AdoptInfoService adoptInfoService;
+    private  final VolunteerService volunteerService;
 
     /**
      * Токен бота, загружаемый из {@code application.properties}.
@@ -95,13 +96,17 @@ public class AnimalShelterTelegramBot {
      * @param userSessionService  сервис для хранения состояния диалога
      */
 
-    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService, UserSessionService userSessionService, ShelterInfoService shelterInfoService, ReportRequestService reportRequestService, AdoptInfoService adoptInfoService) {
+    public AnimalShelterTelegramBot(TelegramBot telegramBot, StartHandlerService startHandlerService,
+                                    UserSessionService userSessionService, ShelterInfoService shelterInfoService,
+                                    ReportRequestService reportRequestService, AdoptInfoService adoptInfoService,
+                                    VolunteerService volunteerService) {
         this.telegramBot = telegramBot;
         this.startHandlerService = startHandlerService;
         this.userSessionService = userSessionService;
         this.shelterInfoService = shelterInfoService;
         this.reportRequestService = reportRequestService;
         this.adoptInfoService = adoptInfoService;
+        this.volunteerService = volunteerService;
     }
 
     /**
@@ -158,36 +163,13 @@ public class AnimalShelterTelegramBot {
             } else if ("MENU_REPORT".equals(data)) {
                 reportRequestService.handleReportRequest(chatId);
             } else if ("MENU_VOLUNTEER".equals(data)) {
-                handleVolunteerCall(chatId);
+                volunteerService.handleVolunteerCall(chatId);
             } else {
                 shelterInfoService.handleShelterInfoMenu(chatId, data);
             }
 
             //  убираем нажатие с кнопки
             answerCallbackQuery(update.callbackQuery().id(), "Обработка...");
-        }
-    }
-
-    /**
-     * 🔹 Вызов волонтёра
-     */
-    private void handleVolunteerCall(long chatId) {
-        // 1. Подтверждение пользователю
-        sendMessage(chatId, "✅ Волонтёр уже уведомлён! Ожидайте ответа в течение 5-10 минут.");
-
-        // 2. Обновляем состояние
-        userSessionService.setStateVolunteerCalled(chatId);
-
-        // 3. Уведомление волонтёрам
-        String alert = String.format("🆘 *Вызов волонтёра!*\n" + "👤 Пользователь: `%d`\n" + "⏰ Время: `%s`", chatId, java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm dd.MM.yyyy")));
-        SendMessage alertMessage = new SendMessage(volunteerChatId, alert);
-        alertMessage.parseMode(ParseMode.Markdown);
-
-        try {
-            telegramBot.execute(alertMessage);
-        } catch (Exception e) {
-            // Если не удалось отправить в админ-чат — логируем ошибку
-            System.err.println("Не удалось отправить уведомление волонтёрам: " + e.getMessage());
         }
     }
 
