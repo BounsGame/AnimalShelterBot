@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalUnit;
 
 /**
  * Сервис для управления сессией пользователя в Telegram-боте.
@@ -168,10 +169,35 @@ public class UserSessionService {
             return userSessionRepository.save(newSession);
         });
     }
-
+    //методы для управления испытательным сроком
     public void startProbation (Long chatId){
         UserSession userSession = findOrCreateSession(chatId);
-        userSession.setProbationTime(LocalDateTime.now());
+        userSession.setProbationStartTime(LocalDateTime.now());
+        userSession.setProbationOverTime(LocalDateTime.now().plusDays(30));
+        userSessionRepository.save(userSession);
+    }
+
+    public void add14DaysToProbation(Long chatId){
+        UserSession userSession = findOrCreateSession(chatId);
+        userSession.setProbationOverTime(userSession.getProbationOverTime().plusDays(14));
+        userSessionRepository.save(userSession);
+    }
+
+    public void add30DaysToProbation(Long chatId){
+        UserSession userSession = findOrCreateSession(chatId);
+        userSession.setProbationOverTime(userSession.getProbationOverTime().plusDays(30));
+        userSessionRepository.save(userSession);
+    }
+
+    public void probationFail(Long chatId){
+        UserSession userSession = findOrCreateSession(chatId);
+        userSession.setProbationComplete(false);
+        userSessionRepository.save(userSession);
+    }
+
+    public void probationComplete(Long chatId){
+        UserSession userSession = findOrCreateSession(chatId);
+        userSession.setProbationComplete(true);
         userSessionRepository.save(userSession);
     }
 }
