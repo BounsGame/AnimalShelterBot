@@ -1,6 +1,8 @@
 package com.animalShelterBot.service;
 
 import com.animalShelterBot.model.AnimalType;
+import com.animalShelterBot.model.ContactData;
+import com.animalShelterBot.repository.ContactsRepository;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
@@ -21,11 +23,13 @@ public class ShelterInfoService {
     private TelegramBot telegramBot;
 
     private final UserSessionService userSessionService;
+    private final ContactsRepository contactsRepository;
     private static final Logger logger = LoggerFactory.getLogger(ShelterInfoService.class);
 
-    ShelterInfoService(TelegramBot telegramBot, UserSessionService userSessionService) {
+    ShelterInfoService(TelegramBot telegramBot, UserSessionService userSessionService, ContactsRepository contactsRepository) {
         this.telegramBot = telegramBot;
         this.userSessionService = userSessionService;
+        this.contactsRepository = contactsRepository;
     }
 
     /**
@@ -33,13 +37,17 @@ public class ShelterInfoService {
      */
     public void handleShelterInfo(long chatId) {
         InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
-        keyboard.addRow(createButton("Режим работы", "SHELTER_SCHEDULE"),
-                createButton("Адрес", "SHELTER_ADDRESS"));
-        keyboard.addRow(createButton("Контакты охраны", "SECURITY_CONTACTS"),
-                createButton("Рекомендации", "SAFETY_RULES"));
-        SendMessage message = new SendMessage(chatId, "Выберите, что вас интересует:\n• Режим работы приюта.\n• Адрес приюта и схема проезда.\n• Контактные данные охраны для оформления пропуска.\n• Рекомендации по технике безопасности на территории приюта");
+        keyboard.addRow(createButton("Описание", "SHELTER_DESCRIPTION"),
+                createButton("Режим работы", "SHELTER_SCHEDULE"));
+        keyboard.addRow(createButton("Адрес", "SHELTER_ADDRESS"),
+                createButton("Контакты охраны", "SECURITY_CONTACTS"));
+        keyboard.addRow(createButton("Рекомендации", "SAFETY_RULES"),
+                createButton("Оставить контакты", "USER_CONTACTS"));
+        keyboard.addRow(createButton("Вызов волонтера", "MENU_VOLUNTEER"));
+        SendMessage message = new SendMessage(chatId, "Выберите, что вас интересует:\n• Описание приюта.\n• Режим работы приюта.\n• Адрес приюта и схема проезда.\n• Контактные данные охраны для оформления пропуска.\n• Рекомендации по технике безопасности на территории приюта.\n• Оставить контактные данные для связи с вами.\n• Позвать волонтера.");
         message.replyMarkup(keyboard);
         telegramBot.execute(message);
+        userSessionService.setStateInShelterInfoMenu(chatId);
     }
 
     /**
@@ -56,6 +64,9 @@ public class ShelterInfoService {
      */
     public void handleShelterInfoMenu(long chatId, String callbackData) {
         switch (callbackData) {
+            case "SHELTER_DESCRIPTION":
+                sendShelterDescription(chatId);
+                break;
             case "SHELTER_SCHEDULE":
                 sendShelterSchedule(chatId);
                 break;
@@ -68,8 +79,47 @@ public class ShelterInfoService {
             case "SAFETY_RULES":
                 sendSafetyRules(chatId);
                 break;
+            case "USER_CONTACTS":
+                userSessionService.setStateAwaitingContactInfo(chatId);
+                sendMessage(chatId, "Пожалуйста, оставьте контактные данные для связи");
+                break;
             default:
                 sendMessage(chatId, "Выберите кнопку");
+        }
+    }
+
+    /**
+     * Принимает и сохраняет контактные данные для связи с пользователем
+     * @param chatId идентификатор чата, куда отправляется сообщение
+     */
+    public void saveUserContacts(long chatId, String contactInfo) {
+        if (contactInfo == null || contactInfo.trim().isEmpty()) {
+            sendMessage(chatId, "Вы не указали контактные данные. Пожалуйста, попробуйте еще раз.");
+            return;
+        }
+        ContactData contact = new ContactData(chatId, contactInfo.trim());
+        contactsRepository.save(contact);
+        sendMessage(chatId, "Ваши контактные данные успешно сохранены.");
+        userSessionService.setStateInShelterInfoMenu(chatId);
+    }
+
+    /**
+     * Отправляет описание приюта
+     * @param chatId идентификатор чата, куда отправляется сообщение
+     */
+    private void sendShelterDescription(long chatId) {
+        // Получаем тип приюта из БД через сервис
+        AnimalType shelterType = userSessionService.getShelterType(chatId);
+
+        if (shelterType == AnimalType.CAT) {
+            // 🐱 Ветка для кошачьего приюта
+            sendMessage(chatId, "🐱 Добро пожаловать в «Котодом»!\nЭто уютный приют для кошек, где каждый пушистый житель окружен заботой и вниманием. У нас животные получают ветеринарную помощь, полноценное питание и заботу. Приют открыт для посещений: можно познакомиться с обитателями и найти нового члена семьи.");
+        } else if (shelterType == AnimalType.DOG) {
+            // 🐕 Ветка для собачьего приюта
+            sendMessage(chatId, "🐕 Добро пожаловать в приют «Верный друг»!\nЗдесь собаки обретают шанс на новую жизнь. У нас есть подопечные разных пород и возрастов. В приюте заботятся об их лечении и социализации. Мы активно ищем новые семьи для наших животных и помогаем им с адаптацией. Приходите, верный друг уже ждет вас.");
+        } else {
+            // Если тип приюта не определён (защита от ошибок)
+            sendMessage(chatId, "⚠️ Сначала выберите тип приюта через /start");
         }
     }
 
@@ -176,6 +226,12 @@ public class ShelterInfoService {
         } catch (IOException e) {
             logger.error("Ошибка при отправке изображения из ресурсов: {}", resourcePath, e);
             sendMessage(chatId, "Ошибка при загрузке изображения");
+        }
+    }
+
+    public void handleCallbackQuery(long chatId, String callbackData) {
+        if (userSessionService.isInShelterInfoMenu(chatId)) {
+            handleShelterInfoMenu(chatId, callbackData);
         }
     }
 }

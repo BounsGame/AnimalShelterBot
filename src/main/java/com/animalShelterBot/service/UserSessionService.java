@@ -72,6 +72,37 @@ public class UserSessionService {
     }
 
     /**
+     * Устанавливает состояние "в меню информации о приюте".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateInShelterInfoMenu(Long chatId) {
+        System.out.println("in shelterInfo");
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.IN_SHELTER_INFO_MENU);
+        userSessionRepository.save(session);
+    }
+
+    public boolean isInShelterInfoMenu(Long chatId) {
+        UserSession session = findOrCreateSession(chatId);
+        return State.IN_SHELTER_INFO_MENU.equals(session.getState());
+    }
+
+    /**
+     * Устанавливает состояние "ожидание контактных данных пользователя".
+     *
+     * @param chatId идентификатор чата пользователя
+     */
+    @Transactional
+    public void setStateAwaitingContactInfo(Long chatId) {
+        System.out.println("awaiting contactInfo");
+        UserSession session = findOrCreateSession(chatId);
+        session.setState(State.AWAITING_CONTACT_INFO);
+        userSessionRepository.save(session);
+    }
+
+    /**
      * Устанавливает состояние "ожидание отчёта".
      *
      * @param chatId идентификатор чата пользователя

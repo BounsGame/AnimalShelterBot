@@ -143,6 +143,10 @@ public class AnimalShelterTelegramBot {
                 startHandlerService.handleStart(chatId);
             }
             // Здесь потом можно добавить обработку текстовых сообщений в других состояниях
+            State currentState = userSessionService.getState(chatId);
+            if (currentState == State.AWAITING_CONTACT_INFO) {
+                shelterInfoService.saveUserContacts(chatId, messageText);
+            }
         }
 
         // === Обработка нажатий на inline-кнопки ===
@@ -155,6 +159,7 @@ public class AnimalShelterTelegramBot {
 
             // главное меню
             if ("MENU_INFO".equals(data)) {
+                userSessionService.setStateInShelterInfoMenu(chatId);
                 shelterInfoService.handleShelterInfo(chatId);
             } else if ("MENU_ADOPT".equals(data)) {
                 adoptInfoService.handleAdoptInfo(chatId);
@@ -165,8 +170,10 @@ public class AnimalShelterTelegramBot {
             } else if ("MENU_VOLUNTEER".equals(data)) {
                 volunteerService.handleVolunteerCall(chatId);
             } else {
-                shelterInfoService.handleShelterInfoMenu(chatId, data);
+                // меню информации о приюте
+                shelterInfoService.handleCallbackQuery(chatId, data);
             }
+
 
             //  убираем нажатие с кнопки
             answerCallbackQuery(update.callbackQuery().id(), "Обработка...");

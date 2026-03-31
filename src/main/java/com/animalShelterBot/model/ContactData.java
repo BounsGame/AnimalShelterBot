@@ -23,15 +23,16 @@ public class ContactData {
     @Column
     private String contacts;
 
+    public ContactData() {
+
+    }
+
     public ContactData(Long chatId, String contacts) {
-        try {
-            if (chatId != null) {
-                this.chatId = chatId;
-                this.contacts = contacts;
-            } else throw new IllegalArgumentException("id чата должно быть не null");
-        }catch (IllegalArgumentException e){
-            System.out.println("произошла ошибка id чата должно быть не null");
+        if (chatId == null) {
+            throw new IllegalArgumentException("id чата должно быть не null");
         }
+        this.chatId = chatId;
+        this.contacts = contacts;
     }
 
     public Long getChatId() {
@@ -51,7 +52,7 @@ public class ContactData {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return "пользователь " + chatId + " оставил эти данный для контакта: " + contacts;
     }
 }
