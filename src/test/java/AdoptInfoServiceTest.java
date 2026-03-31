@@ -129,6 +129,42 @@ public class AdoptInfoServiceTest {
     }
 
     @Test
+    public void handleAdoptCallback_K9TipsSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_K9_TIPS", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Советы кинолога по первичному общению с собакой");
+    }
+
+    @Test
+    public void handleAdoptCallback_K9ContactsSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_K9_CONTACTS", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Проверенные кинологи (Москва)");
+    }
+
+    @Test
+    public void handleAdoptCallback_RejectionReasonsSendsTextTest() {
+        long chatId = 123L;
+
+        adoptInfoService.handleAdoptCallback("ADOPT_REJECTION_REASONS", chatId);
+
+        verify(telegramBot).execute(sendMessageCaptor.capture());
+        String text = sendMessageCaptor.getValue().getParameters().get("text").toString();
+
+        assert text.contains("Причины, по которым могут отказать в выдаче собаки");
+    }
+
+    @Test
     public void handleAdoptCallback_UnknownDataDoesNotSendMessageTest() {
         long chatId = 123L;
 

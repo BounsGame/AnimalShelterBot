@@ -45,7 +45,14 @@ public class AdoptInfoService {
         keyboard.addRow(new InlineKeyboardButton("🏠 Обустройство дома (щенок/котёнок)").callbackData("ADOPT_HOME_PUPPY"));
         keyboard.addRow(new InlineKeyboardButton("🏠 Обустройство дома (взрослый)").callbackData("ADOPT_HOME_ADULT"));
         keyboard.addRow(new InlineKeyboardButton("🏠 Обустройство дома (с ОВЗ)").callbackData("ADOPT_HOME_SPECIAL"));
-        keyboard.addRow(new InlineKeyboardButton("🤝 Знакомство до усыновления").callbackData("ADOPT_MEET_TIPS"));
+        keyboard.addRow(new InlineKeyboardButton("🤝 Знакомство до выдачи питомца").callbackData("ADOPT_MEET_TIPS"));
+
+        // Только для собак — кинологические советы
+        if (shelterType == AnimalType.DOG) {
+            keyboard.addRow(new InlineKeyboardButton("🎓 Советы кинолога").callbackData("ADOPT_K9_TIPS"));
+            keyboard.addRow(new InlineKeyboardButton("📞 Проверенные кинологи").callbackData("ADOPT_K9_CONTACTS"));
+            keyboard.addRow(new InlineKeyboardButton("🚫 Причины отказа").callbackData("ADOPT_REJECTION_REASONS"));
+        }
 
         SendMessage message = new SendMessage(chatId, text);
         message.parseMode(ParseMode.Markdown);
@@ -78,6 +85,15 @@ public class AdoptInfoService {
             case "ADOPT_HOME_SPECIAL":
                 text = getHomeSetupSpecial();
                 break;
+            case "ADOPT_K9_TIPS": // только для собак
+                text = getK9Tips();
+                break;
+            case "ADOPT_K9_CONTACTS": // только для собак
+                text = getK9Contacts();
+                break;
+            case "ADOPT_REJECTION_REASONS": // причины отказа
+                text = getRejectionReasons();
+                break;
             default:
                 return; // неизвестная команда — игнорируем
         }
@@ -109,6 +125,21 @@ public class AdoptInfoService {
 
     private String getHomeSetupSpecial() {
         return "🏠 *Обустройство дома для животного с ОВЗ:*\n\n" + "• Уберите пороги и барьеры (для слабовидящих или с проблемами передвижения)\n" + "• Используйте звуковые маркеры (колокольчики на дверях)\n" + "• Обустройте лежанку на уровне пола, без подъёмов\n" + "• Для слепых — сохраняйте постоянную расстановку мебели\n" + "• Для парализованных — регулярный уход и смена положения тела";
+    }
+
+    // Только для собак
+    private String getK9Tips() {
+        return "🎓 *Советы кинолога по первичному общению с собакой:*\n\n" + "• Не смотрите прямо в глаза — это может восприниматься как вызов\n" + "• Подходите сбоку, не сверху\n" + "• Предложите руку для обнюхивания, не пытайтесь сразу гладить\n" + "• Говорите спокойно, без резких интонаций\n" + "• Не делайте резких движений и не протягивайте игрушки сразу";
+    }
+
+    // Только для собак
+    private String getK9Contacts() {
+        return "📞 *Проверенные кинологи (Москва):*\n\n" + "• *Иван Петров* — специалист по реабилитации агрессивных собак\n" + "  📱 +7 (916) 123-45-67\n" + "  📍 Москва, ЮЗАО\n\n" + "• *Анна Сидорова* — тренировка щенков и командное послушание\n" + "  📱 +7 (926) 987-65-43\n" + "  📍 Москва, ЦАО\n\n" + "• *Школа дрессировки «Пёс и человек»*\n" + "  🌐 https://dogschool.ru\n" + "  📍 Метро «Калужская»";
+    }
+
+    // Причины отказа в усыновлении (актуально для собак)
+    private String getRejectionReasons() {
+        return "🚫 *Причины, по которым могут отказать в выдаче собаки:*\n\n" + "• Несоответствие жилищных условий (маленькая квартира, нет двора)\n" + "• Отсутствие опыта содержания собак крупных пород\n" + "• Частые командировки или длительные отъезды\n" + "• Наличие маленьких детей без наблюдения взрослых\n" + "• Желание использовать собаку как охранника\n" + "• Отказ от подписания договора ответственного содержания\n" + "• Негативное отношение соседей или членов семьи";
     }
 
     private void sendMessage(long chatId, String text) {
